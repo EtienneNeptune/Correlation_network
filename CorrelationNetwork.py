@@ -265,125 +265,126 @@ if "returns" in st.session_state and "corr" in st.session_state:
     <style>
       .node-label {{
         font: 11px ui-sans-serif, system-ui;
-        fill: #333;
         pointer-events: none;
+        /* la couleur sera forcée via JS selon le thème */
       }}
       .tooltip {{
         position: absolute;
         padding: 6px 10px;
         background: rgba(255,255,255,0.95);
         border: 1px solid #ccc;
-        border-radius: 4px;
+        border-radius: 6px;
         font-size: 12px;
         pointer-events: none;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
       }}
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script>
-    const DATA = {json.dumps(graph_payload).replace("</", "<\\/")};
-    const container = document.getElementById('graph');
-    const WIDTH = container.clientWidth || 1000;
-    const HEIGHT = container.clientHeight || 600;
+      const DATA = {json.dumps(graph_payload).replace("</", "<\\/")};
+      const container = document.getElementById('graph');
+      const WIDTH = container.clientWidth || 1000;
+      const HEIGHT = container.clientHeight || 650;
 
-    const outer = d3.select(container).append("svg")
-      .attr("width", WIDTH)
-      .attr("height", HEIGHT);
+      const outer = d3.select(container).append("svg")
+        .attr("width", WIDTH)
+        .attr("height", HEIGHT);
 
-    const g = outer.append("g");
-    outer.call(d3.zoom()
-      .scaleExtent([0.3, 3])
-      .on("zoom", (event) => g.attr("transform", event.transform))
-    );
+      const g = outer.append("g");
+      outer.call(d3.zoom().scaleExtent([0.3, 3]).on("zoom", (e) => g.attr("transform", e.transform)));
 
-    const tooltip = d3.select(container).append("div")
-      .attr("class", "tooltip")
-      .style("opacity", 0);
+      // Elements
+      const tooltip = d3.select(container).append("div").attr("class", "tooltip").style("opacity", 0);
 
-    const link = g.append("g")
-      .attr("stroke", "#999")
-      .attr("stroke-opacity", 0.6)
-      .selectAll("line")
-      .data(DATA.links)
-      .join("line")
-      .attr("stroke-width", d => Math.sqrt(1 + d.value));
+      const link = g.append("g")
+        .attr("stroke-opacity", 0.6)
+        .selectAll("line")
+        .data(DATA.links)
+        .join("line")
+        .attr("stroke-width", d => Math.sqrt(1 + d.value));
 
-    const node = g.append("g")
-      .attr("stroke-width", 2.0)
-      .selectAll("circle")
-      .data(DATA.nodes)
-      .join("circle")
-      .attr("r", d => d.radius || 8)
-      .attr("fill", d => d.color)
-      .attr("stroke", d => d.stroke)
-      .style("cursor", "grab")
-      .on("mouseover", (event, d) => {{
-        tooltip.transition().duration(100).style("opacity", 1);
-        tooltip.html(`<b>${{d.id}}</b><br>` +
-      `Cluster: <b>C${{d.cluster ?? "?"}}</b><br>` +
-      `Secteur: <b>${{d.sector ?? "N/A"}}</b>)`)
-          .style("left", (event.pageX + 10) + "px")
-          .style("top", (event.pageY - 20) + "px");
-      }})
-      .on("mousemove", (event) => {{
-        tooltip.style("left", (event.pageX + 10) + "px")
-               .style("top", (event.pageY - 20) + "px");
-      }})
-      .on("mouseout", () => {{
-        tooltip.transition().duration(200).style("opacity", 0);
-      }})
-      .call(d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended)
-      );
+      const node = g.append("g")
+        .attr("stroke-width", 2.0)
+        .selectAll("circle")
+        .data(DATA.nodes)
+        .join("circle")
+        .attr("r", d => d.radius || 8)
+        .attr("fill", d => d.color)
+        .attr("stroke", d => d.stroke || "#444")
+        .style("cursor", "grab")
+        .call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended))
+        .on("mouseover", (event, d) => {{
+          tooltip.transition().duration(80).style("opacity", 1);
+          const name = d.name || d.id;
+          tooltip.html(`<b>${{name}}</b>`)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 18) + "px");
+        }})
+        .on("mousemove", (event) => {{
+          tooltip.style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 18) + "px");
+        }})
+        .on("mouseout", () => tooltip.transition().duration(120).style("opacity", 0));
 
-    const labels = g.append("g")
-      .selectAll("text")
-      .data(DATA.nodes)
-      .join("text")
-      .attr("class", "node-label")
-      .text(d => d.name)
-      .attr("text-anchor", "middle")
-      .attr("dy", -10);
+      const labels = g.append("g")
+        .selectAll("text")
+        .data(DATA.nodes)
+        .join("text")
+        .attr("class", "node-label")
+        .text(d => d.name || d.id)
+        .attr("text-anchor", "middle")
+        .attr("dy", -10);
 
-    const simulation = d3.forceSimulation(DATA.nodes)
-      .force("link", d3.forceLink(DATA.links).id(d => d.id).distance(d => 100 + 50*d.value).strength(0.6))
-      .force("charge", d3.forceManyBody().strength(-220).distanceMax(400))
-      .force("center", d3.forceCenter(WIDTH / 2, HEIGHT / 2))
-      .force("collision", d3.forceCollide().radius(d => (d.radius || 8) + 6))
-      .on("tick", ticked);
+      const simulation = d3.forceSimulation(DATA.nodes)
+        .force("link", d3.forceLink(DATA.links).id(d => d.id).distance(d => 100 + 50*d.value).strength(0.6))
+        .force("charge", d3.forceManyBody().strength(-220).distanceMax(400))
+        .force("center", d3.forceCenter(WIDTH/2, HEIGHT/2))
+        .force("collision", d3.forceCollide().radius(d => (d.radius || 8) + 6))
+        .on("tick", ticked);
 
-    function ticked() {{
-      link
-        .attr("x1", d => d.source.x)
-        .attr("y1", d => d.source.y)
-        .attr("x2", d => d.target.x)
-        .attr("y2", d => d.target.y);
-      node
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y);
-      labels
-        .attr("x", d => d.x)
-        .attr("y", d => d.y - 10);
-    }}
+      function ticked() {{
+        link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+        node.attr("cx", d => d.x).attr("cy", d => d.y);
+        labels.attr("x", d => d.x).attr("y", d => d.y - 10);
+      }}
 
-    function dragstarted(event, d) {{
-      if (!event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x;
-      d.fy = d.y;
-      d3.select(this).style("cursor", "grabbing");
-    }}
-    function dragged(event, d) {{
-      d.fx = event.x;
-      d.fy = event.y;
-    }}
-    function dragended(event, d) {{
-      if (!event.active) simulation.alphaTarget(0);
-      d.fx = null;
-      d.fy = null;
-      d3.select(this).style("cursor", "grab");
-    }}
+      function dragstarted(event, d) {{
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x; d.fy = d.y;
+        d3.select(this).style("cursor", "grabbing");
+      }}
+      function dragged(event, d) {{ d.fx = event.x; d.fy = event.y; }}
+      function dragended(event, d) {{
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null; d.fy = null;
+        d3.select(this).style("cursor", "grab");
+      }}
+
+      // --------- THEME AWARE (clair/sombre) ----------
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      function applyTheme(isDark) {{
+        // Couleur des labels (texte)
+        labels.attr("fill", isDark ? "#e5e7eb" : "#333"); // gris clair en dark, gris foncé en clair
+        // Couleur des liens
+        link.attr("stroke", isDark ? "#6b7280" : "#999"); // gris-500 vs gris-600
+        // Contour du conteneur
+        container.style.borderColor = isDark ? "#374151" : "#ddd";
+        // Tooltip
+        const ttBG = isDark ? "rgba(31,41,55,0.95)" : "rgba(255,255,255,0.95)"; // slate-800 vs blanc
+        const ttFG = isDark ? "#e5e7eb" : "#111827"; // texte
+        const ttBD = isDark ? "#4b5563" : "#d1d5db";
+        d3.select(container).select(".tooltip")
+          .style("background", ttBG)
+          .style("color", ttFG)
+          .style("border-color", ttBD)
+          .style("box-shadow", isDark ? "0 2px 6px rgba(0,0,0,0.5)" : "0 2px 6px rgba(0,0,0,0.08)");
+      }}
+      // Appliquer au chargement
+      applyTheme(mq.matches);
+      // Réagir quand l’utilisateur change de thème
+      mq.addEventListener ? mq.addEventListener('change', e => applyTheme(e.matches))
+                          : mq.addListener(e => applyTheme(e.matches)); // fallback anciens navigateurs
     </script>
     """
     components.html(html, height=700, scrolling=True)
