@@ -362,7 +362,7 @@ if "returns" in st.session_state and "corr" in st.session_state:
       }}
 
       // --------- THEME AWARE (clair/sombre) ----------
-      const mq = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
       function applyTheme(isDark) {{
         // Couleur des labels (texte)
         labels.attr("fill", isDark ? "#e5e7eb" : "#333"); // gris clair en dark, gris foncé en clair
