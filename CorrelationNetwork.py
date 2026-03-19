@@ -133,12 +133,9 @@ if launch:
         adj_prices = data["Close"].dropna(how="all")
 
     returns = np.log(adj_prices / adj_prices.shift(1)).dropna(how="all")
-    st.write(returns)
 
-    # enlever les colonnes entièrement NaN
-    returns = returns.dropna(axis=1, how="any")
-
-    st.write(returns)
+    # enlever les lignes avec un NAN
+    returns = returns.dropna(axis=0, how="any")
 
     if returns.empty or returns.shape[1] < 2:
         st.warning("Pas assez de données pour calculer des corrélations.")
