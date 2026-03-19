@@ -138,6 +138,8 @@ if launch:
     # enlever les colonnes entièrement NaN
     returns = returns.dropna(axis=1, how="any")
 
+    st.write(returns)
+
     if returns.empty or returns.shape[1] < 2:
         st.warning("Pas assez de données pour calculer des corrélations.")
         st.stop()
